@@ -1,60 +1,64 @@
-# Prepare
-mkdir -p /root/roundcubemail
-mkdir -p /etc/roundcubemail-1.5.2
+## Prepare to download and download
+mkdir -p /root/roundcubemail-install
+wget --directory-prefix=/root/roundcubemail-install https://github.com/roundcube/roundcubemail/releases/download/1.5.3/roundcubemail-1.5.3-complete.tar.gz
+tar -xzf /root/roundcubemail-install/roundcubemail-1.5.3-complete.tar.gz -C /usr/share/
+rm -rf /usr/share/roundcubemail
+ln -s -r /usr/share/roundcubemail-1.5.3 /usr/share/roundcubemail
 
-mkdir -p /var/www/apps/roundcubemail/plugins
+
+## Prepare to install
 mkdir -p /var/www/apps/roundcubemail/temp
+mkdir -p /var/www/apps/roundcubemail/plugins
 chown -R ispapps:www-data /var/www/apps/roundcubemail
 chmod 0775 /var/www/apps/roundcubemail/temp
 
+
+## Prepare to config
+cp /usr/share/roundcubemail-1.5.3/config /etc/roundcubemail-1.5.3
+mv /usr/share/roundcubemail-1.5.3/config /usr/share/roundcubemail-1.5.3/config.bak
+rm -rf /etc/roundcubemail
+ln -s -r /etc/roundcubemail-1.5.3 /etc/roundcubemail
+ln -s -r /etc/roundcubemail /usr/share/roundcubemail-1.5.3/config
+ln -s -r /etc/roundcubemail /var/www/apps/roundcubemail/config
+wget --directory-prefix=/root/roundcubemail-install https://github.com/mpityesz/roundcube/raw/main/rcmail.etc.config.tar.gz
+tar xzf /root/roundcubemail-install/rcmail.etc.config.tar.gz
+cp -RT /root/roundcubemail-install/etc/roundcubemail /etc/roundcubemail-1.5.3/
+#openssl rand -base64 24 >> config.inc.php
+#set dsnw
+#set des_key
+
+
+## Prepare to log
 mkdir -p /var/log/roundcubemail
 chown -R ispapps:www-data /var/log/roundcubemail
 chmod 0775 /var/log/roundcubemail
+rm -rf /var/www/apps/roundcubemail/logs
+ln -s -r /var/log/roundcubemail /var/www/apps/roundcubemail/logs
 
-ln -s -r /etc/roundcubemail-1.5.2 /etc/roundcubemail
 
-
-# PHP
+## PHP
 php install php-gd php-ldap
 
 
-# SQL
-CREATE DATABASE roundcubemail;
+## SQL
+CREATE DATABASE roundcubemail CHARACTER SET utf8;
 CREATE USER 'roundcubemail'@'localhost';
 GRANT ALL PRIVILEGES ON roundcubemail.* TO 'roundcubemail'@'localhost' IDENTIFIED BY '###PASSWORD###';
 FLUSH PRIVILEGES;
 
 
-# Get latest roundcubemail
-wget --directory-prefix=/root/roundcubemail/ https://github.com/roundcube/roundcubemail/releases/download/1.5.2/roundcubemail-1.5.2-complete.tar.gz
-tar xzf /root/roundcubemail/roundcubemail-1.5.2-complete.tar.gz
-mv /root/roundcubemail/roundcubemail-1.5.2 /usr/share/
-ln -s -r /usr/share/roundcubemail-1.5.2 /usr/share/roundcubemail
+## DB
+mysql -u roundcubemail -p roundcubemail < /usr/share/roundcubemail-1.5.3/SQL/mysql.initial.sql
 
 
-# DB
-mysql -u roundcubemail -p roundcubemail < /usr/share/roundcubemail/SQL/mysql.initial.sql
+## ISPConfig plugin
+## https://github.com/w2c/ispconfig3_roundcube/wiki/Installation
+wget --directory-prefix=/root/roundcubemail-install/ https://github.com/w2c/ispconfig3_roundcube/archive/master.zip
+unzip /root/roundcubemail-install/master.zip
+cp -R /root/roundcubemail-install/ispconfig3_roundcube-master /usr/share/roundcubemail-1.5.2/plugins/
 
 
-# Config
-mv /usr/share/roundcubemail-1.5.2/config /usr/share/roundcubemail-1.5.2/config.bak
-ln -s -r /etc/roundcubemail /usr/share/roundcubemail/config
-wget --directory-prefix=/root/roundcubemail/ https://github.com/mpityesz/roundcube/raw/main/rcmail.etc.config.tar.gz
-tar xzf /root/roundcubemail/rcmail.etc.config.tar.gz
-cp -RT /root/roundcubemail/etc/roundcubemail /etc/roundcubemail-1.5.2/
-# set dsnw
-# set des_key
-# openssl rand -base64 24
-
-
-# ISPConfig plugin
-# https://github.com/w2c/ispconfig3_roundcube/wiki/Installation
-wget --directory-prefix=/root/roundcubemail/ https://github.com/w2c/ispconfig3_roundcube/archive/master.zip
-unzip /root/roundcubemail/master.zip
-cp -R /root/roundcubemail/ispconfig3_roundcube-master /usr/share/roundcubemail-1.5.2/plugins/
-
-
-# ISPConfig remote user
+## ISPConfig remote user
 # user: roundcube_plugin
 # password: ###PASSWORD###
 # set ispconfig3_account config
@@ -70,15 +74,16 @@ cp -R /root/roundcubemail/ispconfig3_roundcube-master /usr/share/roundcubemail-1
 # - Mail user filter functions
 
 
-# Get Composer
-#cd /usr/share/roundcubemail-1.5.2
-#php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+## Get Composer
+cd /usr/share/roundcubemail
+php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
 #php -r "if (hash_file('sha384', 'composer-setup.php') === '55ce33d7678c5a611085589f1f3ddf8b3c52d662cd01d4ba75c0ee0459970c2200a51f492d557530c71c15d8dba01eae') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
-#php composer-setup.php
-#php -r "unlink('composer-setup.php');"
+php composer-setup.php
+php -r "unlink('composer-setup.php');"
 
 
-# Plugin installs
+## Plugin installs
+./composer.phar self-update
 ./composer.phar update
 ./composer.phar require kolab/libcalendaring
 ./composer.phar require kolab/libkolab
@@ -86,7 +91,7 @@ cp -R /root/roundcubemail/ispconfig3_roundcube-master /usr/share/roundcubemail-1
 ./composer.phar require kolab/calendar
 
 
-# Plugin configs
+## Plugin configs
 mv /usr/share/roundcubemail/plugins/calendar/config.inc.php /usr/share/roundcubemail/plugins/calendar/config.inc.php.orig
 ln -s -r /etc/roundcubemail/plugins/calendar/config.inc.php /usr/share/roundcubemail/plugins/calendar/
 
@@ -109,7 +114,7 @@ mv /usr/share/roundcubemail/plugins/zipdownload/config.inc.php /usr/share/roundc
 ln -s -r /etc/roundcubemail/plugins/zipdownload/config.inc.php /usr/share/roundcubemail/plugins/zipdownload/
 
 
-# ISPConfig plugin configs
+## ISPConfig plugin configs
 mv /usr/share/roundcubemail/plugins/ispconfig3_roundcube-master/ispconfig3_account/config.inc.php /usr/share/roundcubemail/plugins/ispconfig3_roundcube-master/ispconfig3_account/config.inc.php.orig
 ln -s -r /etc/roundcubemail/plugins/ispconfig3_account/config.inc.php /usr/share/roundcubemail/plugins/ispconfig3_roundcube-master/ispconfig3_account/config/
 
@@ -126,9 +131,9 @@ mv /usr/share/roundcubemail/plugins/ispconfig3_roundcube-master/ispconfig3_wblis
 ln -s -r /etc/roundcubemail/plugins/ispconfig3_wblist/config.inc.php /usr/share/roundcubemail/plugins/ispconfig3_roundcube-master/ispconfig3_wblist/config/
 
 
-# Symlink Roundcubemail
-ln -s -r /usr/share/roundcubemail/config /var/www/apps/roundcubemail/
-ln -s -r /var/log/roundcubemail /var/www/apps/roundcubemail/logs
+## Symlink Roundcubemail
+#ln -s -r /usr/share/roundcubemail/config /var/www/apps/roundcubemail/
+#ln -s -r /var/log/roundcubemail /var/www/apps/roundcubemail/logs
 ln -s -r /usr/share/roundcubemail/program /var/www/apps/roundcubemail/
 ln -s -r /usr/share/roundcubemail/public_html /var/www/apps/roundcubemail/
 ln -s -r /usr/share/roundcubemail/skins /var/www/apps/roundcubemail/
@@ -136,7 +141,7 @@ ln -s -r /usr/share/roundcubemail/vendor /var/www/apps/roundcubemail/
 ln -s -r /usr/share/roundcubemail/index.php /var/www/apps/roundcubemail/
 
 
-# Plugins
+## Symlink plugins
 ln -s -r /usr/share/roundcubemail/plugins/archive /var/www/apps/roundcubemail/plugins/
 ln -s -r /usr/share/roundcubemail/plugins/calendar /var/www/apps/roundcubemail/plugins/
 ln -s -r /usr/share/roundcubemail/plugins/filesystem_attachments /var/www/apps/roundcubemail/plugins/
@@ -150,7 +155,8 @@ ln -s -r /usr/share/roundcubemail/plugins/tasklist /var/www/apps/roundcubemail/p
 ln -s -r /usr/share/roundcubemail/plugins/userinfo /var/www/apps/roundcubemail/plugins/
 ln -s -r /usr/share/roundcubemail/plugins/vcard_attachments /var/www/apps/roundcubemail/plugins/
 ln -s -r /usr/share/roundcubemail/plugins/zipdownload /var/www/apps/roundcubemail/plugins/
-# ISPConfig plugins
+
+## Symlink ISPConfig plugins
 ln -s -r /usr/share/roundcubemail/plugins/ispconfig3_roundcube-master/ispconfig3_account /var/www/apps/roundcubemail/plugins/
 ln -s -r /usr/share/roundcubemail/plugins/ispconfig3_roundcube-master/ispconfig3_autoreply /var/www/apps/roundcubemail/plugins/
 ln -s -r /usr/share/roundcubemail/plugins/ispconfig3_roundcube-master/ispconfig3_fetchmail /var/www/apps/roundcubemail/plugins/
@@ -159,7 +165,3 @@ ln -s -r /usr/share/roundcubemail/plugins/ispconfig3_roundcube-master/ispconfig3
 ln -s -r /usr/share/roundcubemail/plugins/ispconfig3_roundcube-master/ispconfig3_pass /var/www/apps/roundcubemail/plugins/
 ln -s -r /usr/share/roundcubemail/plugins/ispconfig3_roundcube-master/ispconfig3_spam /var/www/apps/roundcubemail/plugins/
 ln -s -r /usr/share/roundcubemail/plugins/ispconfig3_roundcube-master/ispconfig3_wblist /var/www/apps/roundcubemail/plugins/
-
-
-
-
